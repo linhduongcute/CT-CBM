@@ -95,11 +95,13 @@ SAVE_PATH_CONCEPTS = f"{SAVE_PATH}concepts_discovery"
 
 Một số dataset như AG News và DBpedia có thể được tải qua Hugging Face datasets. Các dataset nội bộ như Movies, Medical hoặc LEDGAR có thể yêu cầu file dữ liệu đặt đúng vị trí mà config/data loader đang trỏ tới.
 
-Nếu dùng Gemma, cần cấu hình Hugging Face token trong `run_experiments/models/utils.py` thay cho placeholder:
+Nếu dùng Gemma, cần cấu hình Hugging Face token trong file `.env` ở thư mục gốc:
 
-```python
-hf_token = "xxxx"
+```env
+HF_TOKEN=your_huggingface_token_here
 ```
+
+File `.env` đã được đưa vào `.gitignore` để tránh commit token lên Git.
 
 ## Luồng thí nghiệm đề xuất
 
@@ -207,4 +209,3 @@ Một số model khác như RoBERTa, GPT-2 hoặc LSTM có nhánh code trong uti
 - Đường dẫn dữ liệu/kết quả cần được chỉnh lại nếu chạy ngoài hạ tầng ban đầu.
 - Các thí nghiệm với transformer lớn hoặc Gemma cần GPU có đủ VRAM.
 - Các file notebook có thể phụ thuộc vào kết quả trung gian từ bước trước, vì vậy nên chạy đúng thứ tự trong phần luồng thí nghiệm.
-

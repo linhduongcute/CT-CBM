@@ -4,7 +4,40 @@ from transformers import RobertaTokenizer, RobertaModel, BertTokenizer, \
 
 from cbm_models import ModelXtoCtoY_function
 
+import os
+from pathlib import Path
 import torch
+
+
+def load_project_env(env_path=None):
+    """Load simple KEY=VALUE entries from the project .env file."""
+    if env_path is None:
+        env_path = Path(__file__).resolve().parents[2] / ".env"
+    else:
+        env_path = Path(env_path)
+
+    if not env_path.exists():
+        return
+
+    for line in env_path.read_text(encoding="utf-8").splitlines():
+        line = line.strip()
+        if not line or line.startswith("#") or "=" not in line:
+            continue
+        key, value = line.split("=", 1)
+        key = key.strip()
+        value = value.strip().strip('"').strip("'")
+        os.environ.setdefault(key, value)
+
+
+def get_hf_token():
+    load_project_env()
+    hf_token = os.getenv("HF_TOKEN") or os.getenv("HUGGINGFACE_HUB_TOKEN")
+    if not hf_token:
+        raise RuntimeError(
+            "Missing Hugging Face token. Add HF_TOKEN=your_token to a .env file "
+            "at the project root, or set HUGGINGFACE_HUB_TOKEN in your environment."
+        )
+    return hf_token
 
 
 # Load the model and tokenizer and bottleneck layer
@@ -32,12 +65,12 @@ def load_model_and_tokenizer(config, n_concepts = 4):
         tokenizer = GPT2Tokenizer.from_pretrained(config.model_name)
         tokenizer.pad_token = tokenizer.eos_token
     elif config.model_name == 'gemma':
-        hf_token = "xxxx" 
-        tokenizer = AutoTokenizer.from_pretrained("google/gemma-2-2b-it", use_auth_token=hf_token)
+        hf_token = get_hf_token()
+        tokenizer = AutoTokenizer.from_pretrained("google/gemma-2-2b-it", token=hf_token)
         model = AutoModelForCausalLM.from_pretrained(
             "google/gemma-2-2b-it",
             device_map={"": 0},  # Tout sur GPU 0
-            use_auth_token=hf_token,
+            token=hf_token,
         )
         model = model.base_model
     elif config.model_name == 'lstm':
