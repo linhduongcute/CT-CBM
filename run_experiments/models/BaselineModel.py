@@ -28,7 +28,7 @@ class BaselineModel(nn.Module):
         self.loss_fn = torch.nn.CrossEntropyLoss()
         self.num_epochs = self.config.num_epochs
         self.embedder_model_name = self.config.model_name
-        self.best_acc_score = 0
+        self.best_acc_score = -1
         self.use_cls_token = use_cls_token
         self.embedder_model.to(self.device)
         self.classifier.to(self.device)
@@ -130,6 +130,8 @@ class BaselineModel(nn.Module):
                 if val_accuracy >= self.best_acc_score:
                     self.best_acc_score = val_accuracy
                     self.save_model()
+        if self.val_loader is not None:
+            self.save_model()
         if self.val_loader is None:
             # Efficient car on ne save pas le modèle à chaque itération mais juste à la fin si le val loader n'existe pas
             self.save_model()
