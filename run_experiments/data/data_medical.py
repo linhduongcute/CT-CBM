@@ -33,14 +33,12 @@ def prepare_medical_data(config):
     """
     
     max_len = config.max_len
-    infra = config.infra
-    
-    if infra == "DATABRICKS":
-        # Chemins des données
-        save_path_dictionary = "/dbfs/mnt/ekixai/main/data/Interpretability/concept_xai/experiment/results_medical/concepts_discovery" # this line change when we go to A100
-    else:
-        save_path_dictionary = "/home/bhan/Yann_CBM/Launch/dbfs/results_medical/concepts_discovery" # this line change when we go to A100    
-    
+    save_path_dictionary = getattr(config, "SAVE_PATH_CONCEPTS", None)
+    if save_path_dictionary is None:
+        save_path_dictionary = os.path.join(
+            getattr(config, "SAVE_PATH", f"./results_{config.DATASET}"),
+            "concepts_discovery",
+        )
     os.makedirs(save_path_dictionary, exist_ok=True)
     
     # Fichiers de sauvegarde en pkl

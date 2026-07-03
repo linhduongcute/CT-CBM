@@ -155,6 +155,60 @@ from models.utils import load_model_and_tokenizer
 embedder_model, tokenizer, cbm_layer, classifier = load_model_and_tokenizer(config)
 ```
 
+## Chạy trên Kaggle
+
+Ví dụ dưới đây chạy bước tự sinh concept cho bộ `medical` bằng Gemma, lưu output vào `./output`.
+
+```bash
+git clone https://github.com/yann-Choho/CT-CBM.git
+cd CT-CBM
+```
+
+Tạo file `.env` chứa Hugging Face token:
+
+```bash
+echo "HF_TOKEN=your_huggingface_token_here" > .env
+```
+
+Cài dependency. Kaggle thường đã có PyTorch GPU, nên có thể bỏ các dòng PyTorch trong `requirements.txt`:
+
+```bash
+grep -vE "^(torch|torchvision|torchaudio|--extra-index-url)" requirements.txt > /tmp/requirements-kaggle.txt
+pip install -q -r /tmp/requirements-kaggle.txt
+```
+
+Chạy thử ít mẫu trước:
+
+```bash
+python run_experiments/scripts/run_our_annotation.py \
+  --dataset medical \
+  --model-name bert-base-uncased \
+  --discovery-model google/gemma-2-2b-it \
+  --output-root ./output \
+  --n-cluster 10 \
+  --sample-train 20 \
+  --sample-test 10
+```
+
+Nếu chạy ổn, chạy full concept discovery:
+
+```bash
+python run_experiments/scripts/run_our_annotation.py \
+  --dataset medical \
+  --model-name bert-base-uncased \
+  --discovery-model google/gemma-2-2b-it \
+  --output-root ./output \
+  --n-cluster 100
+```
+
+Các file concept tự sinh sẽ nằm ở:
+
+```text
+./output/results_medical/concepts_discovery/
+```
+
+Sau bước này, các notebook/script downstream nên dùng `annotation = "our_annotation"` để đọc `df_with_topics_v4.csv` và `df_with_topics_v4_test.csv`.
+
 ## Kết quả đầu ra
 
 Pipeline lưu kết quả vào `config.SAVE_PATH`, thường theo dạng:

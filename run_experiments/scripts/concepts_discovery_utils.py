@@ -15,13 +15,18 @@ from transformers import AutoTokenizer, AutoModelForCausalLM, pipeline
 # KEPT TO LOAD Gemma in the notebook (need to be called there)
 def load_model(model_name, access_token):
     n_gpus = torch.cuda.device_count()
-    # max_memory = "10000MB"
-    max_memory = "80GB"
+    model_kwargs = {
+        "device_map": "auto",
+        "token": access_token,
+    }
+    if n_gpus > 0:
+        free_bytes, _ = torch.cuda.mem_get_info()
+        max_memory_gib = max(1, int((free_bytes / (1024 ** 3)) * 0.9))
+        model_kwargs["max_memory"] = {i: f"{max_memory_gib}GiB" for i in range(n_gpus)}
+
     model = AutoModelForCausalLM.from_pretrained(
         model_name,
-        device_map="auto", # dispatch efficiently the model on the available ressources
-        max_memory = {i: max_memory for i in range(n_gpus)},
-        token = access_token
+        **model_kwargs
     )
     tokenizer = AutoTokenizer.from_pretrained(model_name , token = access_token)
  

@@ -320,7 +320,8 @@ def create_macro_concepts_pipeline(df_path, save_path, discovery_model, discover
     macro_to_centroid = {}
     for cluster, concepts_list in cluster_representatives.items():
         # get the summary of cluster via prompt
-        macro_concept = generate_macro_concept(concepts_list, discovery_model, discovery_tokenizer)
+        device = config.device if config is not None else torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        macro_concept = generate_macro_concept(concepts_list, discovery_model, discovery_tokenizer, device=device)
 
         # Save the macro concept summary : centroid_np_vector in a json file
         macro_concepts[str(cluster)] = macro_concept

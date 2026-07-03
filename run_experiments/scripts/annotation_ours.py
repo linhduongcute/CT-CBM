@@ -13,11 +13,44 @@ import json
 import torch
 import joblib
 import pandas as pd
+from pathlib import Path
 
 from concepts_bank_utils import (
     prepare_data, save_results, process_extracted_topics, 
     create_macro_concepts_pipeline, create_macro_concepts_pipeline_v2, create_dataloader
 )
+
+
+def load_project_env(env_path=None):
+    """Load simple KEY=VALUE entries from a .env file without adding a dependency."""
+    if env_path is None:
+        candidates = [Path.cwd(), *Path.cwd().parents]
+        env_path = next((folder / ".env" for folder in candidates if (folder / ".env").exists()), None)
+    else:
+        env_path = Path(env_path)
+
+    if env_path is None or not env_path.exists():
+        return
+
+    for line in env_path.read_text(encoding="utf-8").splitlines():
+        line = line.strip()
+        if not line or line.startswith("#") or "=" not in line:
+            continue
+        key, value = line.split("=", 1)
+        os.environ.setdefault(key.strip(), value.strip().strip('"').strip("'"))
+
+
+def get_hf_token(hf_access_token=None):
+    if hf_access_token:
+        return hf_access_token
+    load_project_env()
+    token = os.getenv("HF_TOKEN") or os.getenv("HUGGINGFACE_HUB_TOKEN")
+    if not token:
+        raise RuntimeError(
+            "Missing Hugging Face token. Add HF_TOKEN=your_token to .env "
+            "or pass hf_access_token explicitly."
+        )
+    return token
 
 
 
@@ -244,7 +277,7 @@ def process_and_save_augmentation(train_df,
 
 ##### AUTOMATION ALL-IN-SCRIPT-FILE #####
 
-def launch_our_annotation(model_name = 'google/gemma-2-9b-it',
+def launch_our_annotation(model_name = 'google/gemma-2-2b-it',
                           hf_access_token = None, 
                           train_df = None, 
                           val_df = None,
@@ -257,9 +290,11 @@ def launch_our_annotation(model_name = 'google/gemma-2-9b-it',
     from concepts_discovery_utils import load_model
     
     # import SLM
+    hf_access_token = get_hf_token(hf_access_token)
     discovery_model, discovery_tokenizer = load_model(model_name, hf_access_token)
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    discovery_model.to(device)
+    if not hasattr(discovery_model, "hf_device_map"):
+        device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        discovery_model.to(device)
 
     from models.utils import load_model_and_tokenizer
     embedder_model, embedder_tokenizer, ModelXtoCtoY_layer, classifier = load_model_and_tokenizer(config)
@@ -271,8 +306,8 @@ def launch_our_annotation(model_name = 'google/gemma-2-9b-it',
                                   discovery_model,
                                   discovery_tokenizer,
                                   embedder_tokenizer,
-                                  save_dir = 'dbfs/concept_xai/CBM/results_movies/concepts_discovery_try_code',
-                                  n_cluster = 100,
+                                  save_dir=save_dir,
+                                  n_cluster=n_cluster,
                                 )
 
 
