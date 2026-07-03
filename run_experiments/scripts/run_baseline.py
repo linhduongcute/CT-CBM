@@ -4,13 +4,12 @@ from pipeline_utils import configure_paths, maybe_sample_by_label
 from load_config import load_config
 from prepare_data import load_fc_prepare_data
 from models.utils import load_model_and_tokenizer
-from models.BaselineModel import BaselineModel
 
 
 def main():
     parser = argparse.ArgumentParser(description="Train and save the black-box baseline checkpoint.")
     parser.add_argument("--dataset", default="medical")
-    parser.add_argument("--model-name", default="bert-base-uncased")
+    parser.add_argument("--model-name", default="gemma")
     parser.add_argument("--output-root", default="./output")
     parser.add_argument("--epochs", type=int, default=None)
     parser.add_argument("--sample-train", type=int, default=None)
@@ -33,6 +32,11 @@ def main():
         test_df = maybe_sample_by_label(test_df, args.sample_test, config.seed)
         train_loader = create_dataloader(train_df, tokenizer, config.max_len, config.batch_size)
         test_loader = create_dataloader(test_df, tokenizer, config.max_len, config.batch_size)
+
+    if config.model_name == "gemma":
+        from models.BaselineModel_gemma import BaselineModel
+    else:
+        from models.BaselineModel import BaselineModel
 
     embedder_model, _, _, classifier = load_model_and_tokenizer(config)
     baseline = BaselineModel(

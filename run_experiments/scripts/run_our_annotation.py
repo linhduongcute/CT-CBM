@@ -20,7 +20,7 @@ from prepare_data import load_fc_prepare_data
 def main():
     parser = argparse.ArgumentParser(description="Generate concepts automatically with an LLM.")
     parser.add_argument("--dataset", default="medical")
-    parser.add_argument("--model-name", default="bert-base-uncased")
+    parser.add_argument("--model-name", default="gemma")
     parser.add_argument("--discovery-model", default="google/gemma-2-2b-it")
     parser.add_argument("--output-root", default=None)
     parser.add_argument("--save-dir", default=None)

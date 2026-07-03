@@ -11,6 +11,7 @@ def run(cmd):
 def main():
     parser = argparse.ArgumentParser(description="Run the Kaggle-friendly medical CT-CBM pipeline.")
     parser.add_argument("--output-root", default="./output")
+    parser.add_argument("--model-name", default="gemma")
     parser.add_argument("--discovery-model", default="google/gemma-2-2b-it")
     parser.add_argument("--concept-clusters", type=int, default=100)
     parser.add_argument("--baseline-epochs", type=int, default=10)
@@ -20,7 +21,7 @@ def main():
 
     common = [
         "--dataset", "medical",
-        "--model-name", "bert-base-uncased",
+        "--model-name", args.model_name,
         "--output-root", args.output_root,
     ]
 

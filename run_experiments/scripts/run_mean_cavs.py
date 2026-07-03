@@ -7,15 +7,13 @@ import torch
 from pipeline_utils import configure_paths, ensure_baseline_checkpoint
 from load_config import load_config
 from models.utils import load_model_and_tokenizer
-from models.BaselineModel import BaselineModel
 from prepare_data import prepare_data_from_csv
-from mean_cavs_creation import compute_cavs_mean_minus
 
 
 def main():
     parser = argparse.ArgumentParser(description="Create mean-minus-other CAVs from generated concepts.")
     parser.add_argument("--dataset", default="medical")
-    parser.add_argument("--model-name", default="bert-base-uncased")
+    parser.add_argument("--model-name", default="gemma")
     parser.add_argument("--output-root", default="./output")
     args = parser.parse_args()
 
@@ -25,6 +23,13 @@ def main():
     config.cavs_type_arg = "mean"
 
     ensure_baseline_checkpoint(config)
+
+    if config.model_name == "gemma":
+        from models.BaselineModel_gemma import BaselineModel
+        from mean_cavs_creation_gemma import compute_cavs_mean_minus
+    else:
+        from models.BaselineModel import BaselineModel
+        from mean_cavs_creation import compute_cavs_mean_minus
 
     embedder_model, embedder_tokenizer, _, classifier = load_model_and_tokenizer(config)
     baseline = BaselineModel(

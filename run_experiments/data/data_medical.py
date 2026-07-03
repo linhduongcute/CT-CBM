@@ -1,6 +1,6 @@
 import torch
 import pandas as pd
-from models.utils import load_model_and_tokenizer
+from models.utils import load_tokenizer
 from torch.utils.data import Dataset, DataLoader
 from config_medical import Config
 from sklearn.model_selection import train_test_split
@@ -96,8 +96,8 @@ def prepare_medical_data(config):
         test_df.to_pickle(test_file)
         print("Données sauvegardées.")
     
-    # Import the tokenizer
-    _m, tokenizer, _, _c = load_model_and_tokenizer(config)
+    # Import the tokenizer without loading the full backbone model.
+    tokenizer = load_tokenizer(config)
     
     class OurCustomDataset(Dataset):
         def __init__(self, texts, labels, tokenizer, max_len):

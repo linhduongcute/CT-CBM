@@ -141,8 +141,8 @@ sys.path.append("./run_experiments/data")
 from load_config import load_config
 from prepare_data import load_fc_prepare_data
 
-config = load_config(model_name="bert-base-uncased", dataset="agnews")
-prepare_data = load_fc_prepare_data("agnews")
+config = load_config(model_name="gemma", dataset="medical")
+prepare_data = load_fc_prepare_data("medical")
 
 train_loader, test_loader, val_loader, train_df, val_df, test_df = prepare_data(config)
 ```
@@ -157,7 +157,7 @@ embedder_model, tokenizer, cbm_layer, classifier = load_model_and_tokenizer(conf
 
 ## Chạy trên Kaggle
 
-Ví dụ dưới đây chạy pipeline lõi cho bộ `medical`, gồm tự sinh concept bằng Gemma, train baseline BERT và tạo mean CAVs. Output được lưu vào `./output`.
+Ví dụ dưới đây chạy pipeline lõi cho bộ `medical`, gồm tự sinh concept bằng Gemma, train baseline Gemma và tạo mean CAVs. Output được lưu vào `./output`.
 
 ```bash
 git clone https://github.com/linhduongcute/CT-CBM.git
@@ -181,6 +181,7 @@ Chạy thử ít mẫu trước:
 
 ```bash
 python run_experiments/scripts/run_medical_pipeline.py \
+  --model-name gemma \
   --discovery-model google/gemma-2-2b-it \
   --output-root ./output \
   --concept-clusters 10 \
@@ -193,6 +194,7 @@ Nếu chạy ổn, chạy full pipeline lõi:
 
 ```bash
 python run_experiments/scripts/run_medical_pipeline.py \
+  --model-name gemma \
   --discovery-model google/gemma-2-2b-it \
   --output-root ./output \
   --concept-clusters 100 \
@@ -203,8 +205,8 @@ Các file chính sẽ nằm ở:
 
 ```text
 ./output/results_medical/concepts_discovery/
-./output/results_medical/blue_checkpoints/bert-base-uncased/BaselineModel/
-./output/results_medical/blue_checkpoints/bert-base-uncased/cavs/mean/
+./output/results_medical/blue_checkpoints/gemma/BaselineModel/
+./output/results_medical/blue_checkpoints/gemma/cavs/mean/
 ```
 
 Các bước LIG, combined ranking và CT-CBM notebook downstream nên dùng `annotation = "our_annotation"` để đọc `df_with_topics_v4.csv` và `df_with_topics_v4_test.csv`.

@@ -40,6 +40,28 @@ def get_hf_token():
     return hf_token
 
 
+def load_tokenizer(config):
+    if config.model_name == 'roberta-base':
+        return RobertaTokenizer.from_pretrained(config.model_name)
+    elif config.model_name == 'roberta-large':
+        return RobertaTokenizer.from_pretrained(config.model_name)
+    elif config.model_name == 'bert-base-uncased':
+        return BertTokenizer.from_pretrained(config.model_name)
+    elif config.model_name == 'deberta-base':
+        return DebertaTokenizer.from_pretrained('microsoft/deberta-base')
+    elif config.model_name == 'deberta-large':
+        return DebertaTokenizer.from_pretrained('microsoft/deberta-large')
+    elif config.model_name == 'gpt2':
+        tokenizer = GPT2Tokenizer.from_pretrained(config.model_name)
+        tokenizer.pad_token = tokenizer.eos_token
+        return tokenizer
+    elif config.model_name == 'gemma':
+        tokenizer = AutoTokenizer.from_pretrained("google/gemma-2-2b-it", token=get_hf_token())
+        tokenizer.pad_token = tokenizer.eos_token
+        return tokenizer
+    raise ValueError(f"Unsupported model_name for tokenizer: {config.model_name}")
+
+
 # Load the model and tokenizer and bottleneck layer
 def load_model_and_tokenizer(config, n_concepts = 4):
     """
@@ -66,7 +88,7 @@ def load_model_and_tokenizer(config, n_concepts = 4):
         tokenizer.pad_token = tokenizer.eos_token
     elif config.model_name == 'gemma':
         hf_token = get_hf_token()
-        tokenizer = AutoTokenizer.from_pretrained("google/gemma-2-2b-it", token=hf_token)
+        tokenizer = load_tokenizer(config)
         model = AutoModelForCausalLM.from_pretrained(
             "google/gemma-2-2b-it",
             device_map={"": 0},  # Tout sur GPU 0

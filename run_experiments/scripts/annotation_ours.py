@@ -296,8 +296,8 @@ def launch_our_annotation(model_name = 'google/gemma-2-2b-it',
         device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         discovery_model.to(device)
 
-    from models.utils import load_model_and_tokenizer
-    embedder_model, embedder_tokenizer, ModelXtoCtoY_layer, classifier = load_model_and_tokenizer(config)
+    from models.utils import load_tokenizer
+    embedder_tokenizer = load_tokenizer(config)
 
     process_and_save_augmentation(train_df, 
                                   val_df,
