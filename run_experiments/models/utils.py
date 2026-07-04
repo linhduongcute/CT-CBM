@@ -90,18 +90,25 @@ def load_model_and_tokenizer(config, n_concepts = 4):
         hf_token = get_hf_token()
         tokenizer = load_tokenizer(config)
         model_kwargs = {
-            "device_map": {"": 0},
+            "device_map": "auto" if torch.cuda.device_count() > 1 else {"": 0},
             "token": hf_token,
             "low_cpu_mem_usage": True,
         }
         if torch.cuda.is_available():
             model_kwargs["torch_dtype"] = torch.float16
             model_kwargs["attn_implementation"] = "eager"
+            model_kwargs["max_memory"] = {
+                i: f"{max(1, int(torch.cuda.mem_get_info(i)[0] / (1024 ** 3)) - 2)}GiB"
+                for i in range(torch.cuda.device_count())
+            }
         model = AutoModelForCausalLM.from_pretrained(
             "google/gemma-2-2b-it",
             **model_kwargs,
         )
+        model_device_map = getattr(model, "hf_device_map", None)
         model = model.base_model
+        if model_device_map is not None:
+            model.hf_device_map = model_device_map
     elif config.model_name == 'lstm':
         # Implement the LSTM model setup here
         pass

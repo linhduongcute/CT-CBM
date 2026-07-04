@@ -26,7 +26,10 @@ class BaselineModel:
         self.embedder_model_name = self.config.model_name
         self.best_acc_score = -1
         self.use_cls_token = use_cls_token
-        self.embedder_model.to(self.device)
+        self.is_dispatched = hasattr(self.embedder_model, "hf_device_map")
+        if not self.is_dispatched:
+            self.embedder_model.to(self.device)
+        self.input_device = next(self.embedder_model.parameters()).device
         self.classifier.to(self.device)
         
         # Dictionnaire pour stocker les performances
@@ -36,10 +39,27 @@ class BaselineModel:
             "test": {}
         }
         
+    def _run_embedder(self, input_ids, attention_mask=None):
+        kwargs = {"input_ids": input_ids.to(self.input_device)}
+        if attention_mask is not None:
+            kwargs["attention_mask"] = attention_mask.to(self.input_device)
+        return self.embedder_model(**kwargs)
+
+    def _pooled_output(self, outputs):
+        if self.use_cls_token:
+            return outputs.last_hidden_state[:, 0, :]
+        return outputs.last_hidden_state.mean(1)
+
+    def _classify(self, pooled_output):
+        classifier_device = next(self.classifier.parameters()).device
+        if classifier_device != pooled_output.device:
+            self.classifier.to(pooled_output.device)
+        return self.classifier(pooled_output)
+
     def get_pooled_output(self, input_ids):
         """ get the embedding of the input text"""
-        outputs = self.embedder_model(input_ids=input_ids)
-        pooled_output = outputs[0][:,-1,:]  # CLS token
+        outputs = self._run_embedder(input_ids)
+        pooled_output = self._pooled_output(outputs)
 
         return pooled_output
         
@@ -60,12 +80,12 @@ class BaselineModel:
 
         with torch.no_grad():
             # Passe à travers le modèle d'embedding
-            outputs = self.embedder_model(input_ids=input_ids)
+            outputs = self._run_embedder(input_ids)
             
-            pooled_output = outputs[0][:,-1,:]  # CLS token
+            pooled_output = self._pooled_output(outputs)
 
             # Passer les caractéristiques intégrées au classificateur
-            logits = self.classifier(pooled_output)
+            logits = self._classify(pooled_output)
             
             # Obtenir les prédictions finales
             predictions = torch.argmax(logits, axis=1)
@@ -77,18 +97,16 @@ class BaselineModel:
             self.embedder_model.eval()
             self.classifier.train()
             for batch in tqdm(self.train_loader, desc="Training", unit="batch"):
-                input_ids = batch["input_ids"].to(self.device)
-                attention_mask = batch["attention_mask"].to(self.device)
-                label = batch["label"].to(self.device)
+                input_ids = batch["input_ids"]
+                attention_mask = batch["attention_mask"]
+                label = batch["label"]
 
                 self.optimizer.zero_grad()
                 with torch.no_grad():
-                    outputs = self.embedder_model(input_ids=input_ids)
-                    if self.use_cls_token:
-                        pooled_output = outputs.last_hidden_state[:, 0, :]
-                    else:
-                        pooled_output = outputs.last_hidden_state.mean(1)
-                logits = self.classifier(pooled_output)
+                    outputs = self._run_embedder(input_ids, attention_mask)
+                    pooled_output = self._pooled_output(outputs)
+                logits = self._classify(pooled_output)
+                label = label.to(logits.device)
                 loss = self.loss_fn(logits, label)
                 loss.backward()
                 self.optimizer.step()
@@ -130,13 +148,14 @@ class BaselineModel:
         true_labels = np.array([])
         with torch.no_grad():
             for batch in tqdm(loader, desc=mode, unit="batch"):
-                input_ids = batch["input_ids"].to(self.device)
-                attention_mask = batch["attention_mask"].to(self.device)
-                label = batch["label"].to(self.device)
-                outputs = self.embedder_model(input_ids=input_ids)
-                pooled_output = outputs[0][:,-1,:]  # CLS token
+                input_ids = batch["input_ids"]
+                attention_mask = batch["attention_mask"]
+                label = batch["label"]
+                outputs = self._run_embedder(input_ids, attention_mask)
+                pooled_output = self._pooled_output(outputs)
 
-                logits = self.classifier(pooled_output)
+                logits = self._classify(pooled_output)
+                label = label.to(logits.device)
                 predictions = torch.argmax(logits, axis=1)
                 accuracy += torch.sum(predictions == label).item()
                 predict_labels = np.append(predict_labels, predictions.cpu().numpy())
@@ -177,7 +196,8 @@ class BaselineModel:
         embedder_state = torch.load(f"{self.save_path}blue_checkpoints/{self.config.model_name}/BaselineModel/{self.embedder_model_name}_state_dict.pth", map_location="cpu")
         if not (isinstance(embedder_state, dict) and embedder_state.get("frozen_pretrained")):
             self.embedder_model.load_state_dict(embedder_state)
-        self.embedder_model.to(self.device)
+        if not self.is_dispatched:
+            self.embedder_model.to(self.device)
         self.classifier.to(self.device)
         self.embedder_model.eval()
         self.classifier.eval()

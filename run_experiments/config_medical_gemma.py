@@ -38,7 +38,7 @@ class Config:
     max_len = 256
     # 128 pour dbpedia et agnews 
     # 512 health et movie genre  
-    batch_size = 8
+    batch_size = 1
     lambda_XtoC = 0.5     # parameter for the loss of the joint strategy
     is_aux_logits = False
     num_epochs = 10
