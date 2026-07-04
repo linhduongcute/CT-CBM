@@ -21,6 +21,20 @@ import numpy as np
 from sklearn.metrics.pairwise import euclidean_distances
 
 
+def generate_concept_text(discovery_model, discovery_tokenizer, encoded_input, device, max_new_tokens=32):
+    encoded_input = encoded_input.to(device)
+    with torch.inference_mode():
+        return discovery_model.generate(
+            encoded_input,
+            max_new_tokens=max_new_tokens,
+            do_sample=False,
+            num_beams=1,
+            pad_token_id=discovery_tokenizer.eos_token_id,
+            eos_token_id=discovery_tokenizer.eos_token_id,
+            use_cache=True,
+        )
+
+
 
 def safe_literal_eval(val):
     try:
@@ -88,15 +102,7 @@ def extract_topics(text, discovery_model, discovery_tokenizer, device = None):
     len_input = encoded_input.shape[1]
     
     # Générer le macro concept en utilisant le modèle
-    outputs = discovery_model.generate(
-        encoded_input.to(device), 
-        max_new_tokens=50, 
-        do_sample=True, 
-        num_beams=2, 
-        no_repeat_ngram_size=2, 
-        early_stopping=True, 
-        temperature=1
-    )
+    outputs = generate_concept_text(discovery_model, discovery_tokenizer, encoded_input, device)
     
     # Décoder et formater la réponse
     answer = "[" + discovery_tokenizer.decode(outputs[0][len_input:], skip_special_tokens=True)
@@ -291,15 +297,7 @@ def create_macro_concepts_pipeline(df_path, save_path, discovery_model, discover
         len_input = encoded_input.shape[1]
         
         # Générer le macro concept en utilisant le modèle
-        outputs = discovery_model.generate(
-            encoded_input.to(device), 
-            max_new_tokens=50, 
-            do_sample=True, 
-            num_beams=2, 
-            no_repeat_ngram_size=2, 
-            early_stopping=True, 
-            temperature=1
-        )
+        outputs = generate_concept_text(discovery_model, discovery_tokenizer, encoded_input, device)
         
         # Décoder et formater la réponse
         answer = discovery_tokenizer.decode(outputs[0][len_input:], skip_special_tokens=True)

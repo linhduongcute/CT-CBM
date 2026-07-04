@@ -18,11 +18,14 @@ def load_model(model_name, access_token):
     model_kwargs = {
         "device_map": "auto",
         "token": access_token,
+        "low_cpu_mem_usage": True,
     }
     if n_gpus > 0:
         free_bytes, _ = torch.cuda.mem_get_info()
         max_memory_gib = max(1, int((free_bytes / (1024 ** 3)) * 0.9))
         model_kwargs["max_memory"] = {i: f"{max_memory_gib}GiB" for i in range(n_gpus)}
+        model_kwargs["torch_dtype"] = torch.float16
+        model_kwargs["attn_implementation"] = "eager"
 
     model = AutoModelForCausalLM.from_pretrained(
         model_name,
