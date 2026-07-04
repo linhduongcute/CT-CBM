@@ -18,7 +18,9 @@ class BaselineModel:
         self.config = config
         self.save_path = save_path
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-        self.optimizer = torch.optim.Adam(list(self.embedder_model.parameters()) + list(self.classifier.parameters()), lr=1e-5)
+        for param in self.embedder_model.parameters():
+            param.requires_grad = False
+        self.optimizer = torch.optim.Adam(self.classifier.parameters(), lr=1e-4)
         self.loss_fn = torch.nn.CrossEntropyLoss()
         self.num_epochs = self.config.num_epochs
         self.embedder_model_name = self.config.model_name
@@ -72,7 +74,7 @@ class BaselineModel:
 
     def train_model(self):
         for epoch in range(self.num_epochs):
-            self.embedder_model.train()
+            self.embedder_model.eval()
             self.classifier.train()
             for batch in tqdm(self.train_loader, desc="Training", unit="batch"):
                 input_ids = batch["input_ids"].to(self.device)
@@ -80,11 +82,12 @@ class BaselineModel:
                 label = batch["label"].to(self.device)
 
                 self.optimizer.zero_grad()
-                outputs = self.embedder_model(input_ids=input_ids)
-                if self.use_cls_token:
-                    pooled_output = outputs.last_hidden_state[:, 0, :]
-                else:
-                    pooled_output = outputs.last_hidden_state.mean(1)
+                with torch.no_grad():
+                    outputs = self.embedder_model(input_ids=input_ids)
+                    if self.use_cls_token:
+                        pooled_output = outputs.last_hidden_state[:, 0, :]
+                    else:
+                        pooled_output = outputs.last_hidden_state.mean(1)
                 logits = self.classifier(pooled_output)
                 loss = self.loss_fn(logits, label)
                 loss.backward()
@@ -164,11 +167,16 @@ class BaselineModel:
     def save_model(self):
         os.makedirs(f"{self.save_path}blue_checkpoints/{self.config.model_name}/BaselineModel", exist_ok=True)
         torch.save(self.classifier.state_dict(), f"{self.save_path}blue_checkpoints/{self.config.model_name}/BaselineModel/{self.embedder_model_name}_classifier_state_dict.pth")
-        torch.save(self.embedder_model.state_dict(), f"{self.save_path}blue_checkpoints/{self.config.model_name}/BaselineModel/{self.embedder_model_name}_state_dict.pth")
+        torch.save(
+            {"frozen_pretrained": True, "model_name": self.embedder_model_name},
+            f"{self.save_path}blue_checkpoints/{self.config.model_name}/BaselineModel/{self.embedder_model_name}_state_dict.pth",
+        )
 
     def load_model(self):
-        self.classifier.load_state_dict(torch.load(f"{self.save_path}blue_checkpoints/{self.config.model_name}/BaselineModel/{self.embedder_model_name}_classifier_state_dict.pth"))
-        self.embedder_model.load_state_dict(torch.load(f"{self.save_path}blue_checkpoints/{self.config.model_name}/BaselineModel/{self.embedder_model_name}_state_dict.pth"))
+        self.classifier.load_state_dict(torch.load(f"{self.save_path}blue_checkpoints/{self.config.model_name}/BaselineModel/{self.embedder_model_name}_classifier_state_dict.pth", map_location=self.device))
+        embedder_state = torch.load(f"{self.save_path}blue_checkpoints/{self.config.model_name}/BaselineModel/{self.embedder_model_name}_state_dict.pth", map_location="cpu")
+        if not (isinstance(embedder_state, dict) and embedder_state.get("frozen_pretrained")):
+            self.embedder_model.load_state_dict(embedder_state)
         self.embedder_model.to(self.device)
         self.classifier.to(self.device)
         self.embedder_model.eval()

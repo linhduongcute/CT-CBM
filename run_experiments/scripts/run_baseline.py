@@ -3,7 +3,7 @@ import argparse
 from pipeline_utils import configure_paths, maybe_sample_by_label
 from load_config import load_config
 from prepare_data import load_fc_prepare_data
-from models.utils import load_model_and_tokenizer
+from models.utils import load_model_and_tokenizer, load_tokenizer
 
 
 def main():
@@ -27,7 +27,7 @@ def main():
     if args.sample_train or args.sample_test:
         from concepts_bank_utils import create_dataloader
 
-        _, tokenizer, _, _ = load_model_and_tokenizer(config)
+        tokenizer = load_tokenizer(config)
         train_df = maybe_sample_by_label(train_df, args.sample_train, config.seed)
         test_df = maybe_sample_by_label(test_df, args.sample_test, config.seed)
         train_loader = create_dataloader(train_df, tokenizer, config.max_len, config.batch_size)

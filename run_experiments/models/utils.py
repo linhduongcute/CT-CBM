@@ -89,10 +89,17 @@ def load_model_and_tokenizer(config, n_concepts = 4):
     elif config.model_name == 'gemma':
         hf_token = get_hf_token()
         tokenizer = load_tokenizer(config)
+        model_kwargs = {
+            "device_map": {"": 0},
+            "token": hf_token,
+            "low_cpu_mem_usage": True,
+        }
+        if torch.cuda.is_available():
+            model_kwargs["torch_dtype"] = torch.float16
+            model_kwargs["attn_implementation"] = "eager"
         model = AutoModelForCausalLM.from_pretrained(
             "google/gemma-2-2b-it",
-            device_map={"": 0},  # Tout sur GPU 0
-            token=hf_token,
+            **model_kwargs,
         )
         model = model.base_model
     elif config.model_name == 'lstm':
